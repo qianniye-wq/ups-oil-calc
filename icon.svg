@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="UPS油量填单计算器">
+  <rect width="512" height="512" fill="#351C15"/>
+  <path d="M256 107 Q352 222.6 352 309 A96 96 0 0 1 160 309 Q160 222.6 256 107 Z" fill="#FFB500"/>
+  <ellipse cx="222" cy="300" rx="19" ry="25" fill="#ffffff" opacity="0.45" transform="rotate(-20 222 300)"/>
+</svg>

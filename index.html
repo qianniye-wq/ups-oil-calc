@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#351C15">
+<meta name="description" content="UPS 油量填单计算器（离线可用）">
+<title>UPS油量填单计算器</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="油量填单">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --brown:#351C15; --brown-2:#4a2a1e; --gold:#FFB500;
+    --bg:#f4f1ee; --card:#fff; --line:#e6ded7;
+    --txt:#2b211c; --muted:#8a7b72;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--txt); background:var(--bg);
+  }
+  header{
+    background:linear-gradient(135deg,var(--brown),var(--brown-2));
+    color:#fff; padding:calc(14px + env(safe-area-inset-top)) 16px 16px;
+  }
+  header h1{margin:0; font-size:18px; font-weight:600; letter-spacing:.3px}
+  .gold{color:var(--gold)}
+  main{padding:14px 14px calc(26px + env(safe-area-inset-bottom)); max-width:560px; margin:0 auto}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px; margin-bottom:12px}
+  .card h2{margin:0 0 12px; font-size:13px; font-weight:600; color:var(--muted); letter-spacing:.4px}
+
+  .field{margin-bottom:13px}
+  .field:last-of-type{margin-bottom:0}
+  label{display:block; font-size:13px; color:var(--muted); margin-bottom:6px}
+  .input-wrap{display:flex; align-items:center; gap:8px;
+    background:#faf8f6; border:1.5px solid var(--line); border-radius:11px; padding:0 12px;
+    transition:border-color .15s,background .15s}
+  .input-wrap:focus-within{border-color:var(--gold); background:#fff}
+  .input-wrap .unit{font-size:14px; color:var(--muted); font-weight:600; white-space:nowrap}
+  input[type=text]{
+    flex:1; min-width:0; border:0; outline:0; background:transparent;
+    font:inherit; font-size:20px; font-weight:600; padding:12px 0; color:var(--txt);
+    font-variant-numeric:tabular-nums;
+  }
+  input[type=text]::placeholder{color:#c3b6ad; font-weight:400; font-size:16px}
+
+  /* 结果 */
+  .result{background:linear-gradient(135deg,var(--brown),var(--brown-2)); border:0; color:#fff}
+  .result h2{color:#c9b3a8; margin-bottom:6px}
+  .row{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 0}
+  .row + .row{border-top:1px solid rgba(255,255,255,.12)}
+  .row .k{font-size:14px; color:#d9c7bd; line-height:1.35}
+  .row .k em{display:block; font-style:normal; font-size:11.5px; color:#a08d84; margin-top:3px}
+  .row .v{font-size:21px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .row .v small{font-size:12px; font-weight:600; color:#c9b3a8; margin-left:3px}
+  .row.total{padding-top:13px}
+  .row.total .k{font-size:15px; color:#fff; font-weight:600}
+  .row.total .v{font-size:30px; color:var(--gold)}
+  .row.total .v small{color:var(--gold); opacity:.7}
+
+  .clear{
+    width:100%; font:inherit; font-size:15px; font-weight:600; padding:13px; border-radius:11px; cursor:pointer;
+    border:1.5px solid var(--line); background:var(--card); color:var(--brown); transition:.12s;
+  }
+  .clear:active{transform:translateY(1px)}
+
+  .note{font-size:12px; color:var(--muted); line-height:1.75; margin:14px 2px 0}
+  .note b{color:#6b5c53}
+
+  #toast{
+    position:fixed; left:50%; bottom:calc(26px + env(safe-area-inset-bottom));
+    transform:translate(-50%,14px); opacity:0; pointer-events:none;
+    background:rgba(43,33,28,.94); color:#fff; font-size:14px;
+    padding:10px 18px; border-radius:22px; transition:.22s; z-index:9; white-space:nowrap;
+  }
+  #toast.show{opacity:1; transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>UPS油量填单<span class="gold">计算器</span></h1>
+</header>
+
+<main>
+  <section class="card">
+    <h2>输入</h2>
+
+    <div class="field">
+      <label for="rem">剩余油量</label>
+      <div class="input-wrap">
+        <input id="rem" type="text" inputmode="decimal" placeholder="0" autocomplete="off">
+        <span class="unit">磅</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="liters">油车加油量</label>
+      <div class="input-wrap">
+        <input id="liters" type="text" inputmode="decimal" placeholder="0" autocomplete="off">
+        <span class="unit">升</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="dens">油量密度</label>
+      <div class="input-wrap">
+        <input id="dens" type="text" inputmode="decimal" placeholder="0.0000" autocomplete="off">
+        <span class="unit">kg/L</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card result">
+    <h2>计算结果</h2>
+
+    <div class="row">
+      <span class="k">加仑数<em>升 ÷ 3.785，四舍五入取整</em></span>
+      <span class="v" id="r-gal">—</span>
+    </div>
+
+    <div class="row">
+      <span class="k">加油量<em>加仑数 × 密度系数，四舍五入取整</em></span>
+      <span class="v" id="r-add">—<small>磅</small></span>
+    </div>
+
+    <div class="row">
+      <span class="k">密度系数<em>油量密度 × 8.327，保留一位小数</em></span>
+      <span class="v" id="r-df">—</span>
+    </div>
+
+    <div class="row total">
+      <span class="k">总磅数<em style="color:#a08d84">剩余油量 + 加油量</em></span>
+      <span class="v" id="r-total">—<small>磅</small></span>
+    </div>
+  </section>
+
+  <button id="reset" class="clear">清空</button>
+
+  <p class="note">
+    <b>计算口径</b><br>
+    ① 加仑数 = 油车加油量（升）÷ 3.785，四舍五入到整数<br>
+    ② 密度系数 = 油量密度（kg/L）× 8.327，四舍五入保留一位小数<br>
+    ③ 加油量（磅）= ① 加仑数 × ② 密度系数，四舍五入到整数<br>
+    ④ 总磅数 = 剩余油量（磅）+ ③ 加油量（磅）<br>
+    <b>注意</b>：③ 使用的是①已取整的加仑数和②已保留一位的密度系数，不是原始精度。<br>
+    油量密度会保存在本机，刷新或重开网页自动带出（清空按钮不会清掉它）。
+  </p>
+</main>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var KEY = 'ups.oil.v1';
+  var L_PER_GAL = 3.785;   // 升 → 加仑
+  var DENS_K   = 8.327;    // kg/L → 磅/加仑
+
+  var $ = function(id){ return document.getElementById(id); };
+  var el = {
+    rem: $('rem'), liters: $('liters'), dens: $('dens'),
+    gal: $('r-gal'), add: $('r-add'), df: $('r-df'), total: $('r-total'),
+    reset: $('reset'), toast: $('toast')
+  };
+
+  /* ---------- 数值处理 ---------- */
+
+  // 读取输入，容忍千分位与空格；空或非法返回 null
+  function num(input){
+    var s = String(input.value).replace(/[,\s]/g, '');
+    if (s === '') return null;
+    var n = Number(s);
+    if (!isFinite(n) || n < 0) return null;
+    return n;
+  }
+
+  // 四舍五入到整数（加极小量抵消浮点表示误差）
+  function rint(v){ return Math.round(v + 1e-9); }
+  // 四舍五入保留一位小数
+  function r1(v){ return Math.round(v * 10 + 1e-9) / 10; }
+
+  function group(s){
+    var p = s.split('.');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return p.join('.');
+  }
+  function fmtInt(v){ return v === null ? '—' : group(String(rint(v))); }
+  function fmt1(v){ return v === null ? '—' : group(v.toFixed(1)); }
+  // 总磅数为精确求和，不做额外圆整：最多两位小数，去掉多余的 0
+  function fmtLoose(v){
+    if (v === null) return '—';
+    return group(String(Number(v.toFixed(2))));
+  }
+
+  function toast(msg){
+    el.toast.textContent = msg;
+    el.toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ el.toast.classList.remove('show'); }, 1700);
+  }
+
+  /* ---------- 密度记忆 ---------- */
+
+  // 只记油量密度：它是每辆车都一样、但每票单都要重填的那个值
+  function saveDensity(){
+    try{ localStorage.setItem(KEY, JSON.stringify({ dens: el.dens.value })); }catch(e){}
+  }
+  function loadDensity(){
+    var raw = null;
+    try{ raw = localStorage.getItem(KEY); }catch(e){}
+    if(!raw) return;
+    try{
+      var d = JSON.parse(raw);
+      if(d && d.dens) el.dens.value = d.dens;
+    }catch(e){}
+  }
+
+  /* ---------- 核心计算 ---------- */
+
+  function calc(){
+    var rem    = num(el.rem);
+    var liters = num(el.liters);
+    var dens   = num(el.dens);
+
+    // ① 加仑数：先取整
+    var gal = (liters === null) ? null : rint(liters / L_PER_GAL);
+    // ② 密度系数：先保留一位小数
+    var df  = (dens === null) ? null : r1(dens * DENS_K);
+    // ③ 加油量：用 ① 和 ② 的圆整结果相乘，再取整
+    var addLbs = (gal === null || df === null) ? null : rint(gal * df);
+    // ④ 总磅数：剩余 + 加油量
+    var total = (rem === null || addLbs === null) ? null : rem + addLbs;
+
+    el.gal.textContent  = gal === null ? '—' : fmtInt(gal);
+    el.add.innerHTML    = addLbs === null ? '—' : fmtInt(addLbs) + '<small>磅</small>';
+    el.df.textContent   = df === null ? '—' : fmt1(df);
+    el.total.innerHTML  = total === null ? '—' : fmtLoose(total) + '<small>磅</small>';
+  }
+
+  /* ---------- 事件 ---------- */
+
+  [el.rem, el.liters].forEach(function(i){
+    i.addEventListener('input', calc);
+    i.addEventListener('focus', function(){ this.select(); });
+  });
+
+  // 密度改动即记忆；输入过程中就写，刷新页面不会丢
+  el.dens.addEventListener('input', function(){ calc(); saveDensity(); });
+  el.dens.addEventListener('change', saveDensity);
+  el.dens.addEventListener('blur', saveDensity);
+  el.dens.addEventListener('focus', function(){ this.select(); });
+
+  el.reset.addEventListener('click', function(){
+    el.rem.value = '';
+    el.liters.value = '';
+    calc();
+    toast('已清空（密度保留）');
+  });
+
+  /* ---------- 初始化 ---------- */
+
+  loadDensity();
+  calc();
+})();
+</script>
+
+<script>
+// 注册 Service Worker（离线缓存）。只在 http/https 下注册：
+// 双击本地文件打开时 location.protocol 是 file:，直接跳过，不会报错。
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
